@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Tableau de bord Partenaires — VoteConnect · NGD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<!--
+  TABLEAU DE BORD PARTENAIRES — Écosystème VoteConnect · NGD
+  v3.0.1 (30/09/2026) — Partenaires Financiers & Politiques
+  Données fournies par le Hub Partenaires (Google Apps Script).
+  ► Seul réglage : coller l'URL du Hub dans HUB_URL ci-dessous.
+  ► Aperçu sans données réelles : ajouter ?demo=1 à l'adresse.
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #10201A;
+    --panel: #16281F;
+    --panel-2: #1C3226;
+    --line: rgba(245, 243, 236, 0.10);
+    --line-strong: rgba(245, 243, 236, 0.22);
+    --text: #F4F2E9;
+    --text-2: #C9D3CC;
+    --text-muted: #93AA9D;
+    --orange: #F2A93B;
+    --green: #5CC48F;
+    --alert: #E2664B;
+    /* Couleurs des bots — ordre validé (daltonisme) sur le fond #16281F */
+    --bot-challenger: #3987e5;
+    --bot-biba: #d95926;
+    --bot-bot509: #199e70;
+    --bot-taxi509: #c98500;
+    --bot-expert509: #d55181;
+    /* Statuts (toujours avec icône + libellé) */
+    --st-good: #0ca30c;
+    --st-warn: #fab219;
+    --st-crit: #d03b3b;
+    /* Badges des deux piles techniques */
+    --pile-hist-bg: #14213D; --pile-hist-fg: #E3C567; --pile-hist-bd: #C9A227;
+    --pile-saas-bg: #0B3B3A; --pile-saas-fg: #7FE3D6; --pile-saas-bd: #14B8A6;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --display: 'Space Grotesk', system-ui, sans-serif;
+    --body: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 32px,
+      linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 32px 100%,
+      var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  button, input { font: inherit; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; }
+  .hidden { display: none !important; }
+  .mono { font-family: var(--mono); }
+
+  /* ---------- Connexion ---------- */
+  .login { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+  .login-card {
+    width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line-strong);
+    border-radius: 6px; padding: 28px 24px;
+  }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--orange); margin: 0 0 6px; }
+  .login h1, .title { font-family: var(--display); font-weight: 700; letter-spacing: -.01em; margin: 0; }
+  .login h1 { font-size: 26px; margin-bottom: 8px; }
+  .login p.lead { color: var(--text-muted); font-size: 14px; margin: 0 0 22px; line-height: 1.5; }
+  .field label { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+  .field input[type=password], .field input[type=text] {
+    width: 100%; background: var(--bg); border: 1px solid var(--line-strong); color: var(--text);
+    font-family: var(--mono); font-size: 16px; letter-spacing: .08em; padding: 12px; border-radius: 4px; text-transform: uppercase;
+  }
+  .field input:focus-visible, .btn:focus-visible, .seg button:focus-visible, input[type=date]:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); margin: 14px 0 18px; }
+  .btn {
+    background: var(--orange); color: #1A1206; border: none; font-family: var(--mono); font-weight: 600;
+    font-size: 12px; letter-spacing: .05em; text-transform: uppercase; padding: 10px 14px; border-radius: 4px; cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn[disabled] { opacity: .6; cursor: wait; }
+  .btn.block { width: 100%; padding: 13px; font-size: 13px; }
+  .btn.ghost { background: transparent; color: var(--text-2); border: 1px solid var(--line-strong); }
+  .btn.ghost:hover { border-color: var(--orange); color: var(--text); }
+  .msg-err { color: var(--alert); font-size: 13px; min-height: 18px; margin-top: 12px; }
+  .login-foot { margin-top: 22px; font-size: 12px; color: var(--text-muted); line-height: 1.5; border-top: 1px solid var(--line); padding-top: 14px; }
+
+  /* ---------- En-tête ---------- */
+  .header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line-strong); padding-bottom: 18px; margin-bottom: 18px; }
+  .title { font-size: clamp(22px, 3vw, 30px); }
+  .who { margin: 8px 0 0; color: var(--text-2); font-size: 14px; }
+  .scope { display: inline-block; margin-top: 8px; font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+    border: 1px solid var(--line-strong); border-radius: 3px; padding: 3px 8px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .demo-banner { background: repeating-linear-gradient(135deg, #3a2a10 0 12px, #2e220d 12px 24px); border: 1px solid var(--orange);
+    color: var(--orange); font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+    padding: 10px 14px; border-radius: 4px; margin-bottom: 16px; }
+
+  /* ---------- Période ---------- */
+  .periode { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line-strong); border-radius: 4px; overflow: hidden; background: var(--panel); }
+  .seg button { background: transparent; color: var(--text-2); border: 0; border-right: 1px solid var(--line); padding: 8px 12px;
+    font-family: var(--mono); font-size: 12px; cursor: pointer; }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed=true] { background: var(--orange); color: #1A1206; font-weight: 600; }
+  .custom { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  input[type=date] { background: var(--panel); border: 1px solid var(--line-strong); color: var(--text); font-family: var(--mono);
+    font-size: 12px; padding: 7px 8px; border-radius: 4px; }
+  .status { font-family: var(--mono); font-size: 12px; color: var(--text-muted); margin: 0 0 18px; min-height: 16px; }
+  .status.err { color: var(--alert); }
+
+  /* ---------- Tuiles KPI ---------- */
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 22px; }
+  @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 620px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .card { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 4px; padding: 14px; position: relative; min-width: 0; }
+  .card::before { content: ''; position: absolute; top: 7px; left: 7px; width: 6px; height: 6px; border-top: 1px solid var(--line-strong); border-left: 1px solid var(--line-strong); }
+  .k-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 8px; }
+  .k-value { font-family: var(--mono); font-weight: 700; font-size: clamp(17px, 1.55vw, 21px); letter-spacing: -.02em; margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+  .k-sub { font-size: 12px; color: var(--text-muted); margin: 6px 0 0; }
+  .card.hero { border-color: var(--orange); }
+  .card.hero .k-value { color: var(--orange); }
+  .delta { font-family: var(--mono); font-size: 11.5px; margin-top: 6px; color: var(--text-muted); }
+  .delta.up { color: var(--green); } .delta.down { color: var(--alert); }
+
+  /* ---------- Sections ---------- */
+  .section-label { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted);
+    margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .panel { background: var(--panel); border: 1px solid var(--line-strong); border-radius: 4px; padding: 16px; }
+
+  /* ---------- Graphique ---------- */
+  .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chart-title { font-family: var(--display); font-weight: 600; font-size: 16px; margin: 0; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-2); margin: 4px 0 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+  .chart-box { position: relative; width: 100%; }
+  .chart-box svg { display: block; width: 100%; height: auto; }
+  .axis-text { fill: var(--text-muted); font-family: var(--mono); font-size: 10.5px; }
+  .grid-line { stroke: var(--line); stroke-width: 1; }
+  .base-line { stroke: var(--line-strong); stroke-width: 1; }
+  .hit { fill: transparent; cursor: crosshair; }
+  .hit:hover, .hit.active { fill: rgba(245, 243, 236, .05); }
+  .tip { position: absolute; pointer-events: none; background: #0B1712; border: 1px solid var(--line-strong); border-radius: 4px;
+    padding: 10px 12px; font-size: 12px; min-width: 190px; box-shadow: 0 6px 20px rgba(0,0,0,.35); z-index: 5; }
+  .tip b { font-family: var(--mono); display: block; margin-bottom: 6px; color: var(--text); }
+  .tip .row { display: flex; justify-content: space-between; gap: 14px; color: var(--text-2); line-height: 1.6; }
+  .tip .row span:last-child { font-family: var(--mono); color: var(--text); }
+  .tip .tot { border-top: 1px solid var(--line-strong); margin-top: 4px; padding-top: 4px; }
+  .empty { color: var(--text-muted); font-style: italic; font-size: 13px; padding: 24px 0; text-align: center; }
+  .linkbtn { background: none; border: 0; color: var(--orange); font-family: var(--mono); font-size: 11.5px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ---------- Bots ---------- */
+  .bots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  @media (max-width: 1100px) { .bots { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 720px) { .bots { grid-template-columns: 1fr; } }
+  .bot { display: flex; flex-direction: column; gap: 10px; border-top: 3px solid var(--c); }
+  .bot-head { display: flex; justify-content: space-between; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
+  .bot-name { font-family: var(--display); font-weight: 700; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .pile { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .08em; padding: 3px 6px; border-radius: 3px; white-space: nowrap; border: 1px solid; }
+  .pile.hist { background: var(--pile-hist-bg); color: var(--pile-hist-fg); border-color: var(--pile-hist-bd); }
+  .pile.saas { background: var(--pile-saas-bg); color: var(--pile-saas-fg); border-color: var(--pile-saas-bd); }
+  .chip { font-family: var(--mono); font-size: 11px; display: inline-flex; gap: 6px; align-items: center; color: var(--text-2); }
+  .chip i { font-style: normal; width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .bot-figs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .bot-figs .l { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+  .bot-figs .v { font-family: var(--mono); font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+  .share { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
+  .share div { height: 100%; background: var(--c); border-radius: 3px; }
+  .bot-extra { font-size: 12px; color: var(--text-2); line-height: 1.6; border-top: 1px solid var(--line); padding-top: 8px; }
+  .bot-extra div { display: flex; justify-content: space-between; gap: 8px; }
+  .bot-extra span:last-child { font-family: var(--mono); color: var(--text); }
+  .bot-msg { font-size: 11.5px; color: var(--text-muted); font-style: italic; }
+
+  /* ---------- Tableaux ---------- */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); color: var(--text-2); }
+  td:first-child { white-space: nowrap; }
+  td.n, th.n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+  td.n { color: var(--text); }
+  tr:last-child td { border-bottom: 0; }
+  tfoot td { font-weight: 700; border-top: 1px solid var(--line-strong); color: var(--text); }
+  .type-tag { font-family: var(--mono); font-size: 10px; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--line-strong); color: var(--text-muted); }
+
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 720px) { .grid4 { grid-template-columns: repeat(2, 1fr); } }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+  .histo-row { display: grid; grid-template-columns: 130px 1fr auto; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  .histo-row:last-child { border-bottom: 0; }
+  .note { font-size: 12.5px; color: var(--text-muted); border-left: 2px solid var(--orange); padding: 10px 14px; background: var(--panel); border-radius: 0 3px 3px 0; line-height: 1.6; margin-top: 22px; }
+  .note b { color: var(--text-2); }
+  .foot { margin-top: 22px; font-family: var(--mono); font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media print {
+    body { background: #fff; color: #111; }
+    .actions, .periode, .linkbtn, .demo-banner button { display: none !important; }
+    .card, .panel { background: #fff; border-color: #ccc; break-inside: avoid; }
+    .k-value, .bot-figs .v, td.n, tfoot td, .tip span { color: #111 !important; }
+    .card.hero .k-value { color: #9a5b00 !important; }
+    .axis-text { fill: #555; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== ÉCRAN DE CONNEXION ===================== -->
+<section class="login" id="ecran-connexion">
+  <form class="login-card" id="form-connexion" autocomplete="off">
+    <p class="eyebrow">Écosystème VoteConnect · NGD</p>
+    <h1>Espace Partenaires</h1>
+    <p class="lead">Suivi en temps réel de l'activité et de la rentabilité journalière des 5 Bots Métiers.</p>
+    <div class="field">
+      <label for="code">Code d'accès partenaire</label>
+      <input id="code" type="password" inputmode="text" placeholder="VC-XXXX-XXXX-XXXX" autocomplete="one-time-code" spellcheck="false" required>
+    </div>
+    <label class="check"><input type="checkbox" id="afficher-code"> Afficher le code</label>
+    <label class="check" style="margin-top:-8px"><input type="checkbox" id="se-souvenir"> Rester connecté sur cet appareil</label>
+    <button class="btn block" id="btn-connexion" type="submit">Accéder au tableau de bord</button>
+    <p class="msg-err" id="err-connexion" role="alert"></p>
+    <p class="login-foot">Accès strictement réservé aux Partenaires Financiers &amp; Politiques de l'Écosystème.
+      Votre code est personnel : ne le partagez pas. Pour obtenir ou renouveler un code, contactez VoteConnect SARL.</p>
+  </form>
+</section>
+
+<!-- ===================== TABLEAU DE BORD ===================== -->
+<main class="wrap hidden" id="ecran-app">
+  <div class="demo-banner hidden" id="demo-banner">⚠ Données fictives de démonstration — aucun chiffre réel n'est affiché</div>
+
+  <header class="header">
+    <div>
+      <p class="eyebrow">Écosystème VoteConnect · NGD · Partenaires Financiers &amp; Politiques</p>
+      <h1 class="title">Tableau de bord Partenaires</h1>
+      <p class="who" id="qui"></p>
+      <span class="scope" id="perimetre"></span>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btn-actualiser" type="button">Actualiser</button>
+      <button class="btn ghost" id="btn-csv" type="button">Exporter CSV</button>
+      <button class="btn ghost" id="btn-imprimer" type="button">Imprimer / PDF</button>
+      <button class="btn ghost" id="btn-deconnexion" type="button">Déconnexion</button>
+    </div>
+  </header>
+
+  <div class="periode">
+    <div class="seg" role="group" aria-label="Période" id="presets">
+      <button type="button" data-p="jour" aria-pressed="true">Aujourd'hui</button>
+      <button type="button" data-p="hier" aria-pressed="false">Hier</button>
+      <button type="button" data-p="7j" aria-pressed="false">7 jours</button>
+      <button type="button" data-p="30j" aria-pressed="false">30 jours</button>
+      <button type="button" data-p="mois" aria-pressed="false">Ce mois</button>
+      <button type="button" data-p="moisprec" aria-pressed="false">Mois précédent</button>
+    </div>
+    <div class="custom">
+      <input type="date" id="du" aria-label="Du"><span class="mono" style="color:var(--text-muted)">→</span><input type="date" id="au" aria-label="Au">
+      <button class="btn ghost" id="btn-appliquer" type="button">Appliquer</button>
+    </div>
+  </div>
+  <p class="status" id="statut" aria-live="polite"></p>
+
+  <section class="kpis" id="kpis" aria-label="Indicateurs clés"></section>
+
+  <div class="section-label"><span>Évolution de la rentabilité</span></div>
+  <div class="panel">
+    <div class="chart-head">
+      <h2 class="chart-title" id="chart-titre">Revenu net VoteConnect par jour</h2>
+      <div class="seg" role="group" aria-label="Mesure du graphique" id="mesure">
+        <button type="button" data-m="net" aria-pressed="true">Revenu net</button>
+        <button type="button" data-m="brut" aria-pressed="false">Volume brut</button>
+      </div>
+    </div>
+    <div class="legend" id="legende"></div>
+    <div class="chart-box" id="chart"></div>
+    <div style="margin-top:10px"><button class="linkbtn" id="btn-table-jours" type="button">Voir les chiffres en tableau</button></div>
+    <div class="table-wrap hidden" id="table-jours" style="margin-top:12px"></div>
+  </div>
+
+  <div class="section-label"><span>Les 5 Bots Métiers</span><span id="bots-periode"></span></div>
+  <section class="bots" id="bots"></section>
+
+  <div class="section-label"><span>Détail par source de revenu</span></div>
+  <div class="panel table-wrap" id="flux"></div>
+
+  <div id="bloc-charges" class="hidden">
+    <div class="section-label"><span>Charges d'exploitation imputées à la période</span></div>
+    <div class="panel table-wrap" id="charges"></div>
+  </div>
+
+  <div id="bloc-abonnements" class="hidden">
+    <div class="section-label"><span>Abonnements Coalition 509</span><span id="abo-mois"></span></div>
+    <div class="grid4" id="abo-kpis"></div>
+    <div class="grid4" id="abo-acces" style="margin-top:12px"></div>
+    <div class="panel" style="margin-top:12px">
+      <p class="k-label">Historique des accès (20 derniers événements)</p>
+      <div id="abo-histo"></div>
+    </div>
+  </div>
+
+  <p class="note">
+    <b>Volume d'affaires brut</b> : totalité des montants payés par les usagers via l'Écosystème (courses, missions, ventes TCL, frais de dossier, forfaits…).
+    <b>Revenu net VoteConnect</b> : part qui revient réellement à VoteConnect SARL (commissions, 2 % du CashBack TCL, frais de dossier et de connexion, forfaits).
+    <b>Résultat</b> : revenu net diminué des charges d'exploitation de la période (hébergement, bases de données, maintenance…).
+    Les <b>flux</b> (ex. dépôts Mi Sikah) et les <b>activités</b> (inscriptions, candidatures) sont suivis à part : ils ne sont pas du chiffre d'affaires.
+    Chiffres actualisés toutes les 5 minutes au maximum ; fuseau horaire : Abidjan (GMT).
+  </p>
+  <div class="foot"><span id="foot-gen"></span><span>VoteConnect SARL · Tableau de bord Partenaires v3.0.1</span></div>
+</main>
+
+<div class="tip hidden" id="tip" role="tooltip"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     RÉGLAGE — URL du Hub Partenaires (Apps Script → Déployer →
+     Application Web → copier l'URL qui se termine par /exec)
+     ============================================================ */
+  var HUB_URL = 'https://script.google.com/macros/s/AKfycbzmGNSvmS5GFoe6dSrBilGS1AUjpigmeR-iXIX6zdZCRMOs3r6rRgtBYxapl2GjJZt3AQ/exec';
+
+  var VERSION = '3.0.1';
+  var BOTS = [
+    { id: 'CHALLENGER', nom: 'Challenger',   pile: 'HISTORIQUE', c: 'var(--bot-challenger)' },
+    { id: 'BIBA',       nom: 'BIBA',         pile: 'HISTORIQUE', c: 'var(--bot-biba)' },
+    { id: 'BOT509',     nom: 'Bot 509',      pile: 'HISTORIQUE', c: 'var(--bot-bot509)' },
+    { id: 'TAXI509',    nom: 'TAXI 509',     pile: 'SAAS',       c: 'var(--bot-taxi509)' },
+    { id: 'EXPERT509',  nom: "L'Expert 509", pile: 'SAAS',       c: 'var(--bot-expert509)' }
+  ];
+  var BOT = {}; BOTS.forEach(function (b) { BOT[b.id] = b; });
+  var STATUTS = {
+    ok:            { l: 'Connecté',               c: 'var(--st-good)' },
+    partiel:       { l: 'Données partielles',     c: 'var(--st-warn)' },
+    en_attente:    { l: 'Intégration en cours',   c: 'var(--st-warn)' },
+    non_configure: { l: 'Intégration en cours',   c: 'var(--st-warn)' },
+    erreur:        { l: 'Momentanément indisponible', c: 'var(--st-crit)' }
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var DEMO = params.get('demo') === '1';
+  var etat = { jeton: null, partenaire: null, preset: 'jour', du: null, au: null, mesure: 'net', data: null };
+
+  /* ---------- Stockage (toujours protégé : navigation privée, etc.) ---------- */
+  var store = {
+    get: function (k) { try { return sessionStorage.getItem(k) || localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v, durable) { try { (durable ? localStorage : sessionStorage).setItem(k, v); } catch (e) {} },
+    del: function (k) { try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch (e) {} }
+  };
+  (function () { var h = params.get('hub'); if (h && /^https:\/\/script\.google\.com\//.test(h)) store.set('vc_hub', h, true); })();
+  function hubUrl() { var s = store.get('vc_hub'); return s || HUB_URL; }
+  function hubConfigure() { return /^https:\/\/script\.google\.com\//.test(hubUrl()); }
+
+  /* ---------- Formats ---------- */
+  var nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+  var nfc = new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 });
+  function F(n) { return nf.format(Math.round(n || 0)) + ' F'; }
+  function FC(n) { return Math.abs(n) >= 10000 ? nfc.format(n) + ' F' : F(n); }
+  function N(n) { return nf.format(n || 0); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function iso(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function parseIso(s) { return new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)); }
+  function ajout(s, n) { var d = parseIso(s); d.setDate(d.getDate() + n); return iso(d); }
+  var MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  function dateCourte(s) { return (+s.slice(8, 10)) + ' ' + MOIS[+s.slice(5, 7) - 1]; }
+  function dateLongue(s) { return dateCourte(s) + ' ' + s.slice(0, 4); }
+  function aujourdhui() {
+    // Abidjan = GMT : on raisonne en UTC pour coller au Hub
+    var n = new Date(); return n.getUTCFullYear() + '-' + ('0' + (n.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + n.getUTCDate()).slice(-2);
+  }
+
+  /* ---------- Périodes ---------- */
+  function calculerPeriode(p) {
+    var a = aujourdhui();
+    switch (p) {
+      case 'hier': return [ajout(a, -1), ajout(a, -1)];
+      case '7j': return [ajout(a, -6), a];
+      case '30j': return [ajout(a, -29), a];
+      case 'mois': return [a.slice(0, 8) + '01', a];
+      case 'moisprec':
+        var d = parseIso(a.slice(0, 8) + '01'); d.setDate(0);
+        return [iso(d).slice(0, 8) + '01', iso(d)];
+      default: return [a, a];
+    }
+  }
+
+  /* ---------- Appels au Hub ---------- */
+  function appelHub(corps) {
+    if (DEMO) return Promise.resolve(demo(corps));
+    return fetch(hubUrl(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(corps), redirect: 'follow' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+
+  /* ---------- Connexion ---------- */
+  $('afficher-code').addEventListener('change', function () { $('code').type = this.checked ? 'text' : 'password'; });
+  $('form-connexion').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var code = $('code').value.trim();
+    $('err-connexion').textContent = '';
+    if (!DEMO && !hubConfigure()) { $('err-connexion').textContent = 'Tableau de bord non encore relié au Hub Partenaires (réglage HUB_URL).'; return; }
+    if (code.replace(/[^A-Za-z0-9]/g, '').length < 8) { $('err-connexion').textContent = 'Saisissez votre code complet (ex. VC-XXXX-XXXX-XXXX).'; return; }
+    var b = $('btn-connexion'); b.disabled = true; b.textContent = 'Vérification…';
+    appelHub({ action: 'connexion', code: code }).then(function (r) {
+      if (!r.ok) throw new Error(r.message || 'Code invalide ou accès suspendu.');
+      var durable = $('se-souvenir').checked;
+      store.set('vc_jeton', r.jeton, durable);
+      store.set('vc_partenaire', JSON.stringify(r.partenaire), durable);
+      $('code').value = '';
+      ouvrir(r.jeton, r.partenaire);
+    }).catch(function (err) {
+      $('err-connexion').textContent = /HTTP|Failed|NetworkError|Load failed/i.test(err.message)
+        ? 'Hub injoignable. Vérifiez votre connexion Internet et réessayez.' : err.message;
+    }).then(function () { b.disabled = false; b.textContent = 'Accéder au tableau de bord'; });
+  });
+
+  function deconnexion(msg) {
+    store.del('vc_jeton'); store.del('vc_partenaire');
+    etat.jeton = null; etat.partenaire = null; etat.data = null;
+    $('ecran-app').classList.add('hidden'); $('ecran-connexion').classList.remove('hidden');
+    $('err-connexion').textContent = msg || '';
+    $('code').focus();
+  }
+  $('btn-deconnexion').addEventListener('click', function () { deconnexion(''); });
+
+  function ouvrir(jeton, p) {
+    etat.jeton = jeton; etat.partenaire = p;
+    $('ecran-connexion').classList.add('hidden'); $('ecran-app').classList.remove('hidden');
+    $('demo-banner').classList.toggle('hidden', !DEMO);
+    $('qui').textContent = p.nom + (p.organisation ? ' — ' + p.organisation : '');
+    var bots = p.bots === '*' ? 'les 5 bots' : p.bots.map(function (b) { return (BOT[String(b).toUpperCase().replace(/[^A-Z0-9]/g, '')] || { nom: b }).nom; }).join(', ');
+    var reg = p.regions === '*' ? 'toutes les régions' : p.regions.join(', ');
+    $('perimetre').textContent = 'Périmètre : ' + bots + ' · ' + reg + (p.admin ? ' · administrateur' : '');
+    choisirPreset(etat.preset);
+  }
+
+  /* ---------- Période : interactions ---------- */
+  function choisirPreset(p) {
+    etat.preset = p;
+    var r = calculerPeriode(p); etat.du = r[0]; etat.au = r[1];
+    $('du').value = etat.du; $('au').value = etat.au;
+    Array.prototype.forEach.call($('presets').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.p === p)); });
+    charger();
+  }
+  $('presets').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) choisirPreset(b.dataset.p); });
+  $('btn-appliquer').addEventListener('click', function () {
+    var du = $('du').value, au = $('au').value;
+    if (!du || !au) return;
+    if (du > au) { var t = du; du = au; au = t; }
+    etat.preset = 'perso'; etat.du = du; etat.au = au;
+    Array.prototype.forEach.call($('presets').children, function (b) { b.setAttribute('aria-pressed', 'false'); });
+    charger();
+  });
+  $('btn-actualiser').addEventListener('click', function () { charger(); });
+  $('mesure').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    etat.mesure = b.dataset.m;
+    Array.prototype.forEach.call($('mesure').children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    if (etat.data) { dessinerGraphique(etat.data); tableJours(etat.data); }
+  });
+  $('btn-table-jours').addEventListener('click', function () {
+    var t = $('table-jours'); t.classList.toggle('hidden');
+    this.textContent = t.classList.contains('hidden') ? 'Voir les chiffres en tableau' : 'Masquer le tableau';
+  });
+  $('btn-imprimer').addEventListener('click', function () { window.print(); });
+  $('btn-csv').addEventListener('click', exporterCSV);
+
+  /* ---------- Chargement ---------- */
+  var requeteEnCours = 0;
+  function charger() {
+    var n = ++requeteEnCours;
+    $('statut').className = 'status';
+    $('statut').textContent = 'Chargement des données du ' + dateLongue(etat.du) + (etat.du !== etat.au ? ' au ' + dateLongue(etat.au) : '') + '… (jusqu\'à 1 minute si un service se réveille)';
+    $('btn-actualiser').disabled = true;
+    appelHub({ action: 'donnees', jeton: etat.jeton, du: etat.du, au: etat.au }).then(function (d) {
+      if (n !== requeteEnCours) return;
+      if (!d.ok) {
+        if (d.erreur === 'SESSION') { deconnexion(d.message); return; }
+        throw new Error(d.message || 'Erreur du Hub');
+      }
+      etat.data = d;
+      rendre(d);
+      $('statut').textContent = 'Données du ' + dateLongue(d.periode.du) + (d.periode.du !== d.periode.au ? ' au ' + dateLongue(d.periode.au) : '') +
+        ' · mises à jour à ' + d.genere_le.slice(11, 16) + (d.depuis_cache ? ' (cache)' : '');
+    }).catch(function (err) {
+      if (n !== requeteEnCours) return;
+      $('statut').className = 'status err';
+      $('statut').textContent = 'Impossible de charger les données : ' + err.message + '. Réessayez avec « Actualiser ».';
+    }).then(function () { if (n === requeteEnCours) $('btn-actualiser').disabled = false; });
+  }
+
+  /* ---------- Rendu global ---------- */
+  function rendre(d) {
+    tuiles(d);
+    legende(d);
+    dessinerGraphique(d);
+    tableJours(d);
+    cartesBots(d);
+    tableFlux(d);
+    blocCharges(d);
+    blocAbonnements(d);
+    $('bots-periode').textContent = d.periode.nb_jours === 1 ? dateLongue(d.periode.du) : d.periode.nb_jours + ' jours';
+    $('foot-gen').textContent = 'Hub v' + d.version + ' · généré le ' + d.genere_le.slice(0, 10).split('-').reverse().join('/') + ' à ' + d.genere_le.slice(11, 16);
+  }
+
+  function delta(cur, prev, libellePrec) {
+    if (prev === undefined || prev === null) return '';
+    if (!prev && !cur) return '<p class="delta">= période précédente</p>';
+    if (!prev) return '<p class="delta up">▲ nouveau vs ' + libellePrec + '</p>';
+    var p = Math.round((cur - prev) / Math.abs(prev) * 1000) / 10;
+    if (p === 0) return '<p class="delta">= ' + libellePrec + '</p>';
+    return '<p class="delta ' + (p > 0 ? 'up' : 'down') + '">' + (p > 0 ? '▲ +' : '▼ ') + String(p).replace('.', ',') + ' % vs ' + libellePrec + '</p>';
+  }
+
+  function tuiles(d) {
+    var t = d.totaux, tp = d.totaux_precedents || {};
+    var lib = d.periode.nb_jours === 1 ? 'la veille' : 'les ' + d.periode.nb_jours + ' j précédents';
+    var h = '';
+    h += tuile('Revenu net VoteConnect', F(t.net), 'Part revenant à VoteConnect SARL', delta(t.net, tp.net, lib), 'hero');
+    h += tuile("Volume d'affaires brut", F(t.brut), 'Total payé par les usagers', delta(t.brut, tp.brut, lib));
+    if (d.charges_visibles) {
+      h += tuile('Résultat (net − charges)', F(t.resultat), 'Charges : ' + F(t.charges), delta(t.resultat, tp.resultat, lib));
+    } else {
+      h += tuile('Activités', N(t.activite), 'Inscriptions, candidatures…', '');
+    }
+    h += tuile('Moyenne nette / jour', F(t.moyenne_nette_jour), 'Rentabilité journalière', delta(t.moyenne_nette_jour, tp.moyenne_nette_jour, lib));
+    h += tuile('Taux de revenu net', t.taux_net === null ? '—' : String(t.taux_net).replace('.', ',') + ' %', 'Net ÷ brut', '');
+    h += tuile('Transactions', N(t.nb), (t.flux ? 'Flux hors CA : ' + FC(t.flux) : 'Opérations payantes'), delta(t.nb, tp.nb, lib));
+    $('kpis').innerHTML = h;
+  }
+  function tuile(l, v, sub, dl, cls) {
+    return '<div class="card ' + (cls || '') + '"><p class="k-label">' + esc(l) + '</p><p class="k-value">' + esc(v) + '</p><p class="k-sub">' + esc(sub) + '</p>' + (dl || '') + '</div>';
+  }
+
+  function botsVisibles(d) { return d.bots.map(function (b) { return BOT[b.id]; }).filter(Boolean); }
+
+  function legende(d) {
+    $('legende').innerHTML = botsVisibles(d).map(function (b) {
+      return '<span><i class="sw" style="background:' + b.c + '"></i>' + esc(b.nom) + '</span>';
+    }).join('');
+  }
+
+  /* ---------- Regroupement jour / semaine / mois ---------- */
+  function regrouper(d) {
+    var jours = d.jours, n = jours.length, mode = n > 180 ? 'mois' : (n > 62 ? 'semaine' : 'jour');
+    var seaux = [], idx = {};
+    jours.forEach(function (j) {
+      var cle, lib;
+      if (mode === 'jour') { cle = j.date; lib = dateCourte(j.date); }
+      else if (mode === 'mois') { cle = j.date.slice(0, 7); lib = MOIS[+j.date.slice(5, 7) - 1] + ' ' + j.date.slice(2, 4); }
+      else { var dt = parseIso(j.date), dw = (dt.getDay() + 6) % 7; dt.setDate(dt.getDate() - dw); cle = iso(dt); lib = 'sem. ' + dateCourte(cle); }
+      var s = idx[cle];
+      if (!s) { s = idx[cle] = { cle: cle, lib: lib, du: j.date, au: j.date, par_bot: {} }; seaux.push(s); }
+      s.au = j.date;
+      Object.keys(j.par_bot).forEach(function (b) {
+        var x = s.par_bot[b] || (s.par_bot[b] = { brut: 0, net: 0, nb: 0 });
+        x.brut += j.par_bot[b].brut; x.net += j.par_bot[b].net; x.nb += j.par_bot[b].nb;
+      });
+    });
+    return { mode: mode, seaux: seaux };
+  }
+
+  function pasNiveau(max) {
+    if (max <= 0) return 1;
+    var brut = max / 4, p = Math.pow(10, Math.floor(Math.log10(brut))), r = brut / p;
+    return (r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10) * p;
+  }
+
+  /* ---------- Graphique en barres empilées par bot (SVG) ---------- */
+  function dessinerGraphique(d) {
+    var m = etat.mesure, g = regrouper(d), seaux = g.seaux, bots = botsVisibles(d);
+    $('chart-titre').textContent = (m === 'net' ? 'Revenu net VoteConnect' : "Volume d'affaires brut") + ' par ' + g.mode;
+    var box = $('chart');
+    var total = seaux.map(function (s) { return bots.reduce(function (a, b) { return a + ((s.par_bot[b.id] || {})[m] || 0); }, 0); });
+    var max = Math.max.apply(null, total.concat([0]));
+    if (!seaux.length) { box.innerHTML = '<p class="empty">Aucune donnée pour cette période.</p>'; return; }
+
+    var W = Math.max(320, box.clientWidth || 800), H = W < 600 ? 240 : 300;
+    var ml = 58, mr = 10, mt = 12, mb = 28, iw = W - ml - mr, ih = H - mt - mb;
+    var pas = pasNiveau(max), yMax = Math.max(pas * Math.ceil(max / pas), pas);
+    var y = function (v) { return mt + ih - (v / yMax) * ih; };
+    var bw = iw / seaux.length, barW = Math.max(2, Math.min(44, bw * 0.62));
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc($('chart-titre').textContent) + '">';
+    for (var v = 0; v <= yMax + 1e-9; v += pas) {
+      s += '<line class="' + (v === 0 ? 'base-line' : 'grid-line') + '" x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '"/>';
+      s += '<text class="axis-text" x="' + (ml - 8) + '" y="' + (y(v) + 3.5).toFixed(1) + '" text-anchor="end">' + (v === 0 ? '0' : esc(nfc.format(v))) + '</text>';
+    }
+    var chaque = Math.max(1, Math.ceil(seaux.length / Math.floor(iw / 64)));
+    seaux.forEach(function (sx, i) {
+      var cx = ml + bw * i + bw / 2, x0 = cx - barW / 2, base = y(0), segs = [];
+      bots.forEach(function (b) { var val = (sx.par_bot[b.id] || {})[m] || 0; if (val > 0) segs.push({ b: b, v: val }); });
+      segs.forEach(function (sg, k) {
+        var h = (sg.v / yMax) * ih, top = base - h, dernier = k === segs.length - 1;
+        var gap = (!dernier && h > 3) ? 2 : 0;            // 2 px de séparation entre segments
+        var hh = Math.max(0.8, h - gap);
+        if (dernier) s += '<path d="' + barreArrondie(x0, top, barW, hh, Math.min(4, barW / 2, hh)) + '" fill="' + sg.b.c + '"/>';
+        else s += '<rect x="' + x0.toFixed(1) + '" y="' + (top + gap).toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + hh.toFixed(1) + '" fill="' + sg.b.c + '"/>';
+        base = top;
+      });
+      if (i % chaque === 0) s += '<text class="axis-text" x="' + cx.toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle">' + esc(sx.lib) + '</text>';
+      s += '<rect class="hit" data-i="' + i + '" x="' + (ml + bw * i).toFixed(1) + '" y="' + mt + '" width="' + bw.toFixed(1) + '" height="' + ih + '"/>';
+    });
+    s += '</svg>';
+    box.innerHTML = s;
+    if (max === 0) box.insertAdjacentHTML('beforeend', '<p class="empty" style="padding:6px 0 0">Aucun revenu enregistré sur la période.</p>');
+
+    var tip = $('tip');
+    box.querySelectorAll('.hit').forEach(function (r) {
+      function montrer(ev) {
+        box.querySelectorAll('.hit.active').forEach(function (x) { x.classList.remove('active'); });
+        r.classList.add('active');
+        var sx = seaux[+r.dataset.i], tot = 0;
+        var lignes = bots.map(function (b) {
+          var val = (sx.par_bot[b.id] || {})[m] || 0; tot += val;
+          return '<div class="row"><span><i class="sw" style="background:' + b.c + ';margin-right:6px"></i>' + esc(b.nom) + '</span><span>' + F(val) + '</span></div>';
+        }).join('');
+        var titre = sx.du === sx.au ? dateLongue(sx.du) : dateCourte(sx.du) + ' → ' + dateLongue(sx.au);
+        tip.innerHTML = '<b>' + titre + '</b>' + lignes + '<div class="row tot"><span>Total ' + (m === 'net' ? 'net' : 'brut') + '</span><span>' + F(tot) + '</span></div>';
+        tip.classList.remove('hidden');
+        var rect = box.getBoundingClientRect(), px = (ev.touches ? ev.touches[0].clientX : ev.clientX);
+        var left = px - rect.left + 14; if (left + tip.offsetWidth > rect.width) left = px - rect.left - tip.offsetWidth - 14;
+        tip.style.left = (rect.left + window.scrollX + Math.max(0, left)) + 'px';
+        tip.style.top = (rect.top + window.scrollY + 8) + 'px';
+      }
+      r.addEventListener('mousemove', montrer);
+      r.addEventListener('touchstart', montrer, { passive: true });
+      r.addEventListener('mouseleave', function () { tip.classList.add('hidden'); r.classList.remove('active'); });
+    });
+  }
+  function barreArrondie(x, y, w, h, r) {
+    return 'M' + x + ',' + (y + h) + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) +
+      'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + (y + h) + 'Z';
+  }
+  var redim; window.addEventListener('resize', function () { clearTimeout(redim); redim = setTimeout(function () { if (etat.data) dessinerGraphique(etat.data); }, 150); });
+
+  function tableJours(d) {
+    var m = etat.mesure, g = regrouper(d), bots = botsVisibles(d);
+    var h = '<table><thead><tr><th>' + (g.mode === 'jour' ? 'Jour' : g.mode === 'semaine' ? 'Semaine' : 'Mois') + '</th>' +
+      bots.map(function (b) { return '<th class="n">' + esc(b.nom) + '</th>'; }).join('') + '<th class="n">Total</th></tr></thead><tbody>';
+    var totaux = {};
+    g.seaux.forEach(function (s) {
+      var t = 0;
+      h += '<tr><td>' + esc(s.du === s.au ? dateLongue(s.du) : s.lib) + '</td>' + bots.map(function (b) {
+        var v = (s.par_bot[b.id] || {})[m] || 0; t += v; totaux[b.id] = (totaux[b.id] || 0) + v; return '<td class="n">' + F(v) + '</td>';
+      }).join('') + '<td class="n">' + F(t) + '</td></tr>';
+    });
+    var gt = 0;
+    h += '</tbody><tfoot><tr><td>Total ' + (m === 'net' ? 'net' : 'brut') + '</td>' + bots.map(function (b) { gt += totaux[b.id] || 0; return '<td class="n">' + F(totaux[b.id] || 0) + '</td>'; }).join('') + '<td class="n">' + F(gt) + '</td></tr></tfoot></table>';
+    $('table-jours').innerHTML = h;
+  }
+
+  /* ---------- Cartes des bots ---------- */
+  function cartesBots(d) {
+    var totalNet = d.bots.reduce(function (a, b) { return a + Math.max(0, b.net); }, 0);
+    $('bots').innerHTML = d.bots.map(function (b) {
+      var meta = BOT[b.id] || { nom: b.nom, c: 'var(--text-muted)', pile: b.pile };
+      var st = STATUTS[b.statut] || STATUTS.non_configure;
+      var part = totalNet > 0 ? Math.round(Math.max(0, b.net) / totalNet * 100) : 0;
+      var extra = [];
+      Object.keys(b.activite || {}).forEach(function (k) { extra.push([k, N(b.activite[k])]); });
+      Object.keys(b.indicateurs || {}).forEach(function (k) { var v = b.indicateurs[k]; extra.push([k, typeof v === 'number' ? N(v) : String(v)]); });
+      if (b.flux) extra.push(['Flux hors CA', F(b.flux)]);
+      return '<article class="card bot" style="--c:' + meta.c + '">' +
+        '<h3 class="bot-name"><i class="sw" style="background:' + meta.c + '"></i>' + esc(meta.nom) + '</h3>' +
+        '<div class="bot-head"><span class="chip"><i style="background:' + st.c + '"></i>' + (b.statut === 'ok' ? '✓ ' : b.statut === 'erreur' ? '⚠ ' : b.statut === 'partiel' ? '◐ ' : '… ') + esc(st.l) + '</span>' +
+        '<span class="pile ' + (b.pile === 'SAAS' ? 'saas' : 'hist') + '">PILE ' + (b.pile === 'SAAS' ? 'SAAS' : 'HISTORIQUE') + '</span></div>' +
+        '<div class="bot-figs">' +
+          '<div><div class="l">Revenu net</div><div class="v">' + FC(b.net) + '</div></div>' +
+          '<div><div class="l">Brut</div><div class="v">' + FC(b.brut) + '</div></div>' +
+          '<div><div class="l">Transactions</div><div class="v">' + N(b.nb) + '</div></div>' +
+          '<div><div class="l">Part du net</div><div class="v">' + part + ' %</div></div>' +
+        '</div>' +
+        '<div class="share" aria-hidden="true"><div style="width:' + part + '%"></div></div>' +
+        (extra.length ? '<div class="bot-extra">' + extra.map(function (e) { return '<div><span>' + esc(e[0]) + '</span><span>' + esc(e[1]) + '</span></div>'; }).join('') + '</div>' : '') +
+        (b.message && b.statut !== 'ok' ? '<p class="bot-msg">' + esc(b.message) + '</p>' : '') +
+        '</article>';
+    }).join('');
+  }
+
+  /* ---------- Détail par flux ---------- */
+  var TYPES = { REVENU: 'Revenu', FLUX: 'Flux hors CA', ACTIVITE: 'Activité' };
+  function tableFlux(d) {
+    if (!d.flux.length) { $('flux').innerHTML = '<p class="empty">Aucune opération enregistrée sur la période.</p>'; return; }
+    var tb = 0, tn = 0, tx = 0;
+    var h = '<table><thead><tr><th>Bot</th><th>Source</th><th>Nature</th><th class="n">Brut</th><th class="n">Net VoteConnect</th><th class="n">Nombre</th></tr></thead><tbody>';
+    d.flux.forEach(function (f) {
+      var meta = BOT[f.bot] || { nom: f.bot === 'GLOBAL' ? 'Écosystème' : f.bot, c: 'var(--text-muted)' };
+      var rev = f.type === 'REVENU';
+      if (rev) { tb += f.brut; tn += f.net; tx += f.nb; }
+      h += '<tr><td><i class="sw" style="background:' + meta.c + ';margin-right:6px"></i>' + esc(meta.nom) + '</td><td>' + esc(f.flux) + '</td>' +
+        '<td><span class="type-tag">' + esc(TYPES[f.type] || f.type) + '</span></td>' +
+        '<td class="n">' + (f.type === 'ACTIVITE' ? '—' : F(f.brut)) + '</td><td class="n">' + (rev ? F(f.net) : '—') + '</td><td class="n">' + N(f.nb) + '</td></tr>';
+    });
+    h += '</tbody><tfoot><tr><td colspan="3">Total chiffre d\'affaires</td><td class="n">' + F(tb) + '</td><td class="n">' + F(tn) + '</td><td class="n">' + N(tx) + '</td></tr></tfoot></table>';
+    $('flux').innerHTML = h;
+  }
+
+  function blocCharges(d) {
+    var ok = d.charges_visibles;
+    $('bloc-charges').classList.toggle('hidden', !ok);
+    if (!ok) return;
+    if (!d.charges_detail.length) { $('charges').innerHTML = '<p class="empty">Aucune charge saisie pour cette période (feuille CHARGES du Hub).</p>'; return; }
+    var t = 0;
+    $('charges').innerHTML = '<table><thead><tr><th>Poste</th><th class="n">Montant imputé</th></tr></thead><tbody>' +
+      d.charges_detail.map(function (c) { t += c.montant; return '<tr><td>' + esc(c.libelle) + '</td><td class="n">' + F(c.montant) + '</td></tr>'; }).join('') +
+      '</tbody><tfoot><tr><td>Total charges</td><td class="n">' + F(t) + '</td></tr></tfoot></table>';
+  }
+
+  function blocAbonnements(d) {
+    var a = d.abonnements;
+    $('bloc-abonnements').classList.toggle('hidden', !a);
+    if (!a) return;
+    $('abo-mois').textContent = 'Mois : ' + MOIS[+a.mois.slice(5, 7) - 1] + ' ' + a.mois.slice(0, 4);
+    $('abo-kpis').innerHTML =
+      tuile('MRR — revenu récurrent', F(a.mrr), 'Abonnements actifs ce mois', '') +
+      tuile('Churn — résiliation', (a.churn_pct == null ? 0 : a.churn_pct) + ' %', "% d'actifs perdus ce mois", '') +
+      tuile("CAC — coût d'acquisition", a.cac == null ? 'Pas de donnée' : F(a.cac), 'Par nouvel abonné', '') +
+      tuile('LTV — valeur vie client', a.ltv == null ? 'Pas assez de recul' : F(a.ltv), 'Estimation sur durée de vie', '');
+    var s = a.suivi_acces || {};
+    $('abo-acces').innerHTML =
+      tuile("À jour d'abonnement", N(s.a_jour), 'Paiement à jour, dans le groupe', '') +
+      tuile('Non à jour', N(s.non_a_jour), 'En retard, pas encore retiré', '') +
+      tuile('Retirés du groupe', N(s.retires_du_groupe), 'Accès suspendu actuellement', '') +
+      tuile('Réintégrés ce mois', N(s.reintegres_ce_mois), 'Accès restauré après paiement', '');
+    var ev = a.historique || [];
+    $('abo-histo').innerHTML = ev.length ? ev.map(function (e) {
+      var susp = e.action === 'Suspension';
+      return '<div class="histo-row"><span class="mono" style="color:var(--text-muted)">' + esc(e.date) + '</span><span>' + (susp ? '⛔ ' : '✓ ') + esc(e.action) + ' — ' + esc(e.nom_complet || '') + '</span><span class="mono" style="color:var(--text-muted)">' + esc((e.nom_groupe || '').slice(0, 18)) + '</span></div>';
+    }).join('') : '<p class="empty">Aucun événement pour le moment.</p>';
+  }
+
+  /* ---------- Export CSV ---------- */
+  function exporterCSV() {
+    var d = etat.data; if (!d) return;
+    var sep = ';', L = [];
+    var q = function (v) { v = String(v == null ? '' : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    L.push(['Tableau de bord Partenaires VoteConnect', 'Période', d.periode.du, d.periode.au, 'Généré le', d.genere_le].map(q).join(sep));
+    L.push('');
+    L.push(['Indicateur', 'Valeur (FCFA)'].join(sep));
+    [['Volume brut', d.totaux.brut], ['Revenu net VoteConnect', d.totaux.net], ['Transactions', d.totaux.nb]].concat(
+      d.charges_visibles ? [['Charges', d.totaux.charges], ['Résultat', d.totaux.resultat]] : []
+    ).forEach(function (r) { L.push(r.map(q).join(sep)); });
+    L.push('');
+    L.push(['Bot', 'Source', 'Nature', 'Brut', 'Net', 'Nombre'].join(sep));
+    d.flux.forEach(function (f) { L.push([(BOT[f.bot] || { nom: f.bot }).nom, f.flux, TYPES[f.type] || f.type, f.brut, f.net, f.nb].map(q).join(sep)); });
+    L.push('');
+    var bots = botsVisibles(d);
+    L.push(['Jour'].concat(bots.map(function (b) { return b.nom + ' brut'; }), bots.map(function (b) { return b.nom + ' net'; })).map(q).join(sep));
+    d.jours.forEach(function (j) {
+      L.push([j.date].concat(bots.map(function (b) { return (j.par_bot[b.id] || {}).brut || 0; }), bots.map(function (b) { return (j.par_bot[b.id] || {}).net || 0; })).map(q).join(sep));
+    });
+    var blob = new Blob(['﻿' + L.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'voteconnect-partenaires_' + d.periode.du + '_' + d.periode.au + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+  /* ---------- Mode démonstration (?demo=1) : données FICTIVES ---------- */
+  function demo(req) {
+    if (req.action === 'connexion') return { ok: true, jeton: 'demo', partenaire: { nom: 'Partenaire de démonstration', organisation: 'Aperçu', bots: '*', regions: '*', admin: false } };
+    var du = req.du, au = req.au, jours = [], nbJ = 0;
+    var alea = function (seed) { var x = Math.sin(seed) * 10000; return x - Math.floor(x); };
+    var profil = {
+      CHALLENGER: { brut: 180000, taux: 0.12 }, BIBA: { brut: 0, taux: 0 }, BOT509: { brut: 30000, taux: 1 },
+      TAXI509: { brut: 260000, taux: 0.1 }, EXPERT509: { brut: 140000, taux: 0.12 }
+    };
+    var tot = { brut: 0, net: 0, nb: 0 }, parBot = {};
+    for (var dd = du; dd <= au; dd = ajout(dd, 1)) {
+      nbJ++;
+      var j = { date: dd, par_bot: {} }, graine = +dd.replace(/-/g, '');
+      Object.keys(profil).forEach(function (b, k) {
+        var p = profil[b]; if (!p.brut) return;
+        var f = 0.55 + alea(graine * (k + 3)) * 0.9, brut = Math.round(p.brut * f / 100) * 100, net = Math.round(brut * p.taux);
+        var nb = Math.round(brut / 4000);
+        j.par_bot[b] = { brut: brut, net: net, nb: nb };
+        tot.brut += brut; tot.net += net; tot.nb += nb;
+        var x = parBot[b] || (parBot[b] = { brut: 0, net: 0, nb: 0 }); x.brut += brut; x.net += net; x.nb += nb;
+      });
+      jours.push(j);
+    }
+    var charges = Math.round(nbJ * 1450);
+    var pr = function (v) { return Math.round(v * 0.91); };
+    return {
+      ok: true, version: 'démo', genere_le: new Date().toISOString().slice(0, 19).replace('T', ' '), depuis_cache: false,
+      partenaire: { nom: 'Partenaire de démonstration', bots: '*', regions: '*' },
+      periode: { du: du, au: au, nb_jours: nbJ },
+      totaux: { brut: tot.brut, net: tot.net, nb: tot.nb, flux: 320000 * nbJ / 7, activite: 12 * nbJ, taux_net: Math.round(tot.net / tot.brut * 1000) / 10,
+                charges: charges, resultat: tot.net - charges, moyenne_nette_jour: Math.round(tot.net / nbJ) },
+      totaux_precedents: { brut: pr(tot.brut), net: pr(tot.net), nb: pr(tot.nb), charges: charges, resultat: pr(tot.net) - charges, moyenne_nette_jour: Math.round(pr(tot.net) / nbJ) },
+      charges_visibles: true,
+      charges_detail: [{ libelle: 'Hébergement Render — 6 services (GLOBAL)', montant: Math.round(charges * 0.7) }, { libelle: 'Bases PostgreSQL (TAXI509)', montant: Math.round(charges * 0.3) }],
+      bots: BOTS.map(function (b) {
+        var x = parBot[b.id] || { brut: 0, net: 0, nb: 0 };
+        return { id: b.id, nom: b.nom, pile: b.pile, statut: b.id === 'BIBA' ? 'en_attente' : 'ok', message: b.id === 'BIBA' ? 'Intégration en cours' : 'Données à jour',
+          brut: x.brut, net: x.net, nb: x.nb, flux: b.id === 'CHALLENGER' ? Math.round(320000 * nbJ / 7) : 0,
+          activite: b.id === 'BIBA' ? { 'Candidatures': 7 * nbJ, 'Mécènes': Math.ceil(nbJ / 3) } : (b.id === 'CHALLENGER' ? { 'Inscriptions NGD': 5 * nbJ } : {}),
+          indicateurs: b.id === 'TAXI509' ? { 'Chauffeurs actifs': 42 } : (b.id === 'EXPERT509' ? { 'Prestataires actifs': 67, 'Abonnements en cours': 23 } : {}) };
+      }),
+      jours: jours,
+      flux: [
+        { bot: 'TAXI509', flux: 'Courses', type: 'REVENU', brut: (parBot.TAXI509 || {}).brut || 0, net: (parBot.TAXI509 || {}).net || 0, nb: (parBot.TAXI509 || {}).nb || 0 },
+        { bot: 'CHALLENGER', flux: 'Ventes TCL', type: 'REVENU', brut: (parBot.CHALLENGER || {}).brut || 0, net: (parBot.CHALLENGER || {}).net || 0, nb: (parBot.CHALLENGER || {}).nb || 0 },
+        { bot: 'EXPERT509', flux: 'Missions & abonnements', type: 'REVENU', brut: (parBot.EXPERT509 || {}).brut || 0, net: (parBot.EXPERT509 || {}).net || 0, nb: (parBot.EXPERT509 || {}).nb || 0 },
+        { bot: 'BOT509', flux: 'Frais de dossier & connexion Hôtel', type: 'REVENU', brut: (parBot.BOT509 || {}).brut || 0, net: (parBot.BOT509 || {}).net || 0, nb: (parBot.BOT509 || {}).nb || 0 },
+        { bot: 'CHALLENGER', flux: 'Dépôts Mi Sikah', type: 'FLUX', brut: Math.round(320000 * nbJ / 7), net: 0, nb: 3 * nbJ },
+        { bot: 'BIBA', flux: 'Candidatures', type: 'ACTIVITE', brut: 0, net: 0, nb: 7 * nbJ }
+      ],
+      abonnements: { mois: au.slice(0, 7), mrr: 450000, churn_pct: 3.2, cac: null, ltv: null,
+        suivi_acces: { a_jour: 128, non_a_jour: 9, retires_du_groupe: 4, reintegres_ce_mois: 6 },
+        historique: [{ date: '2026-09-29', action: 'Réactivation', nom_complet: 'Abonné démo A', nom_groupe: 'Coalition 509 — Bélier' },
+                     { date: '2026-09-28', action: 'Suspension', nom_complet: 'Abonné démo B', nom_groupe: 'Coalition 509 — Mé' }] }
+    };
+  }
+
+  /* ---------- Démarrage ---------- */
+  var j = store.get('vc_jeton'), p = null;
+  try { p = JSON.parse(store.get('vc_partenaire') || 'null'); } catch (e) { p = null; }
+  if (DEMO && !j) { j = 'demo'; p = demo({ action: 'connexion' }).partenaire; }
+  if (j && p) ouvrir(j, p); else $('code').focus();
+})();
+</script>
+</body>
+</html>
