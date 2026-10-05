@@ -10,7 +10,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <!--
   TABLEAU DE BORD PARTENAIRES — Écosystème VoteConnect · NGD
-  v3.0.1 (30/09/2026) — Partenaires Financiers & Politiques
+  v3.1.0 (05/10/2026) — Partenaires Financiers & Politiques
+  v3.1.0 : section « Souscriptions en Cascade » (4 Conventions), lue par le
+  Hub v1.5.0 dans l'API Centrale NGD v2.0.1 — agrégats uniquement.
   Données fournies par le Hub Partenaires (Google Apps Script).
   ► Seul réglage : coller l'URL du Hub dans HUB_URL ci-dessous.
   ► Aperçu sans données réelles : ajouter ?demo=1 à l'adresse.
@@ -203,6 +205,25 @@
   .note b { color: var(--text-2); }
   .foot { margin-top: 22px; font-family: var(--mono); font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 
+  /* ---------- Souscriptions en Cascade ---------- */
+  .casc-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 1100px) { .casc-kpis { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 620px) { .casc-kpis { grid-template-columns: repeat(2, 1fr); } }
+  .pbar { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .pbar div { height: 100%; background: var(--orange); border-radius: 3px; }
+  .pbar.ok div { background: var(--green); }
+  .proc { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; border: 1px solid; white-space: nowrap; }
+  .proc.direct { color: #E3C567; border-color: #C9A227; background: #14213D; }
+  .proc.inverse { color: #7FE3D6; border-color: #14B8A6; background: #0B3B3A; }
+  tr.cl { cursor: pointer; } tr.cl:hover td { background: var(--panel-2); } tr.cl.sel td { background: var(--panel-2); color: var(--text); }
+  .casc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .casc-head h3 { font-family: var(--display); font-size: 18px; margin: 0; }
+  .tr3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 720px) { .tr3 { grid-template-columns: 1fr; } }
+  .eff { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 12.5px; align-items: center; }
+  .eff .pbar { grid-column: 1 / -1; margin: 0 0 6px; }
+  .casc-msg { color: var(--text-muted); font-size: 13px; }
+
   @media print {
     body { background: #fff; color: #111; }
     .actions, .periode, .linkbtn, .demo-banner button { display: none !important; }
@@ -289,6 +310,15 @@
   <div class="section-label"><span>Les 5 Bots Métiers</span><span id="bots-periode"></span></div>
   <section class="bots" id="bots"></section>
 
+  <div id="bloc-cascade" class="hidden">
+    <div class="section-label"><span>Souscriptions en Cascade — les 4 Conventions <span class="pile saas" style="margin-left:6px">PILE SAAS · API CENTRALE NGD</span></span><span id="casc-au"></span></div>
+    <div id="casc-etat" class="casc-msg hidden"></div>
+    <section class="casc-kpis" id="casc-kpis" aria-label="Indicateurs de la Cascade"></section>
+    <div class="panel table-wrap" id="casc-regions"></div>
+    <div id="casc-detail" class="hidden" style="margin-top:12px"></div>
+    <div id="casc-pres" class="hidden" style="margin-top:12px"></div>
+  </div>
+
   <div class="section-label"><span>Détail par source de revenu</span></div>
   <div class="panel table-wrap" id="flux"></div>
 
@@ -312,9 +342,10 @@
     <b>Revenu net VoteConnect</b> : part qui revient réellement à VoteConnect SARL (commissions, 2 % du CashBack TCL, frais de dossier et de connexion, forfaits).
     <b>Résultat</b> : revenu net diminué des charges d'exploitation de la période (hébergement, bases de données, maintenance…).
     Les <b>flux</b> (ex. dépôts Mi Sikah) et les <b>activités</b> (inscriptions, candidatures) sont suivis à part : ils ne sont pas du chiffre d'affaires.
+    <b>Souscriptions en Cascade</b> : redevances des 4 Conventions (Leader Préfinançant 49 125 000 F par région ; Contributeur Local 100 300 F ; Leader Communal 17 500 F ; Artisan 5 000 F ; Animateur 2 500 F par mois). Elles financent la mobilisation et le remboursement du GAP : elles ne sont pas du chiffre d'affaires de VoteConnect et n'entrent pas dans les totaux ci-dessus.
     Chiffres actualisés toutes les 5 minutes au maximum ; fuseau horaire : Abidjan (GMT).
   </p>
-  <div class="foot"><span id="foot-gen"></span><span>VoteConnect SARL · Tableau de bord Partenaires v3.0.1</span></div>
+  <div class="foot"><span id="foot-gen"></span><span>VoteConnect SARL · Tableau de bord Partenaires v3.1.0</span></div>
 </main>
 
 <div class="tip hidden" id="tip" role="tooltip"></div>
@@ -329,7 +360,7 @@
      ============================================================ */
   var HUB_URL = 'https://script.google.com/macros/s/AKfycbzmGNSvmS5GFoe6dSrBilGS1AUjpigmeR-iXIX6zdZCRMOs3r6rRgtBYxapl2GjJZt3AQ/exec';
 
-  var VERSION = '3.0.1';
+  var VERSION = '3.1.0';
   var BOTS = [
     { id: 'CHALLENGER', nom: 'Challenger',   pile: 'HISTORIQUE', c: 'var(--bot-challenger)' },
     { id: 'BIBA',       nom: 'BIBA',         pile: 'HISTORIQUE', c: 'var(--bot-biba)' },
@@ -349,7 +380,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var params = new URLSearchParams(location.search);
   var DEMO = params.get('demo') === '1';
-  var etat = { jeton: null, partenaire: null, preset: 'jour', du: null, au: null, mesure: 'net', data: null };
+  var etat = { jeton: null, partenaire: null, preset: 'jour', du: null, au: null, mesure: 'net', data: null, cascade: null, region: '' };
 
   /* ---------- Stockage (toujours protégé : navigation privée, etc.) ---------- */
   var store = {
@@ -425,7 +456,7 @@
 
   function deconnexion(msg) {
     store.del('vc_jeton'); store.del('vc_partenaire');
-    etat.jeton = null; etat.partenaire = null; etat.data = null;
+    etat.jeton = null; etat.partenaire = null; etat.data = null; etat.cascade = null; etat.region = '';
     $('ecran-app').classList.add('hidden'); $('ecran-connexion').classList.remove('hidden');
     $('err-connexion').textContent = msg || '';
     $('code').focus();
@@ -489,6 +520,7 @@
       }
       etat.data = d;
       rendre(d);
+      if (d.cascade_disponible) chargerCascade(etat.region); else $('bloc-cascade').classList.add('hidden');
       $('statut').textContent = 'Données du ' + dateLongue(d.periode.du) + (d.periode.du !== d.periode.au ? ' au ' + dateLongue(d.periode.au) : '') +
         ' · mises à jour à ' + d.genere_le.slice(11, 16) + (d.depuis_cache ? ' (cache)' : '');
     }).catch(function (err) {
@@ -738,6 +770,148 @@
     }).join('') : '<p class="empty">Aucun événement pour le moment.</p>';
   }
 
+  /* ---------- Souscriptions en Cascade (Hub v1.5.0 → API Centrale NGD) ---------- */
+  var NIV = { leader_regional: 'Leader Préfinançant', contributeur_local: 'Contributeurs Locaux', leader_communal: 'Leaders Communaux',
+              artisan_ngd: 'Artisans NGD', animateur_ngd: 'Animateurs NGD' };
+  function pct(a, b) { return b ? Math.max(0, Math.min(100, a / b * 100)) : 0; }
+  function P(n) { return n == null ? '—' : String(n).replace('.', ',') + ' %'; }
+  function moisLong(m) { return m ? MOIS[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4) : '—'; }
+  function procTag(p) { return '<span class="proc ' + (p === 'inverse' ? 'inverse' : 'direct') + '">' + (p === 'inverse' ? 'INVERSÉ (B)' : 'DIRECT (A)') + '</span>'; }
+  function tuileBarre(l, v, sub, p, cls) {
+    return '<div class="card ' + (cls || '') + '"><p class="k-label">' + esc(l) + '</p><p class="k-value">' + esc(v) + '</p><p class="k-sub">' + esc(sub) + '</p>' +
+      (p == null ? '' : '<div class="pbar' + (p >= 100 ? ' ok' : '') + '"><div style="width:' + p + '%"></div></div>') + '</div>';
+  }
+
+  var reqCascade = 0;
+  function chargerCascade(region) {
+    var n = ++reqCascade;
+    $('bloc-cascade').classList.remove('hidden');
+    if (!etat.cascade) { $('casc-etat').classList.remove('hidden'); $('casc-etat').textContent = 'Chargement de la Cascade…'; }
+    appelHub({ action: 'cascade', jeton: etat.jeton, region: region || '' }).then(function (r) {
+      if (n !== reqCascade) return;
+      if (!r.ok) { if (r.erreur === 'SESSION') { deconnexion(r.message); return; } throw new Error(r.message || 'Erreur'); }
+      etat.cascade = r; rendreCascade(r);
+    }).catch(function (err) {
+      if (n !== reqCascade) return;
+      $('casc-etat').classList.remove('hidden'); $('casc-etat').textContent = 'Cascade momentanément indisponible (' + err.message + ').';
+    });
+  }
+
+  function rendreCascade(r) {
+    if (!r.visible) { $('bloc-cascade').classList.add('hidden'); return; }
+    var etatEl = $('casc-etat');
+    if (r.statut !== 'ok' && r.statut !== 'aucune_region') {
+      etatEl.classList.remove('hidden'); etatEl.textContent = (r.statut === 'erreur' ? '⚠ ' : '… ') + (r.message || 'Intégration en cours');
+      ['casc-kpis', 'casc-regions'].forEach(function (id) { $(id).innerHTML = ''; });
+      $('casc-detail').classList.add('hidden'); $('casc-pres').classList.add('hidden');
+      return;
+    }
+    etatEl.classList.toggle('hidden', r.statut === 'ok');
+    if (r.statut === 'aucune_region') etatEl.textContent = r.message;
+    $('casc-au').textContent = 'Situation au ' + moisLong(r.au);
+    var t = r.totaux, nat = r.portee === 'nationale', nbR = r.regions.length;
+    $('casc-kpis').innerHTML =
+      tuileBarre('Acteurs de la pyramide', N(t.acteurs) + ' / ' + N(nat ? 3640 : t.acteurs_cible), 'Contributeurs, Communaux, Leaders Locaux', pct(t.acteurs, nat ? 3640 : t.acteurs_cible), 'hero') +
+      tuileBarre('Leaders Préfinançants', N(t.leaders) + ' / ' + N(nbR), 'un par région', pct(t.leaders, nbR)) +
+      tuileBarre('GAP : 49 125 000 F / région', N(t.regions_gap_complet) + ' / ' + N(t.regions_direct) + ' financées', 'Processus Direct · versé ' + FC(t.gap_verse), pct(t.regions_gap_complet, t.regions_direct)) +
+      tuileBarre('Cellules complètes', N(t.cellules_completes) + ' / ' + N(20 * nbR), '1 Contributeur + 4 Communaux + 8 Locaux', pct(t.cellules_completes, 20 * nbR)) +
+      tuileBarre('Recouvrement à date', P(t.taux_recouvrement), 'Perçu ' + FC(t.percu) + ' sur ' + FC(t.du_a_date), t.taux_recouvrement == null ? null : t.taux_recouvrement) +
+      tuileBarre('Arriérés', F(t.arrieres), 'Redevances échues non versées', null);
+    var h = '<table><thead><tr><th>Région</th><th>Processus</th><th>Leader Préfinançant</th><th class="n">Contrib.</th><th class="n">Communaux</th><th class="n">Locaux</th><th class="n">Cellules</th><th class="n">GAP versé</th><th class="n">Recouvrement</th><th class="n">Arriérés</th></tr></thead><tbody>';
+    r.regions.forEach(function (g) {
+      var e = g.effectifs || {}, loc = ((e.artisan_ngd || {}).inscrits || 0) + ((e.animateur_ngd || {}).inscrits || 0);
+      h += '<tr class="cl' + (r.detail && r.detail.region.id === g.id ? ' sel' : '') + '" data-r="' + esc(g.id) + '"><td>' + esc(g.nom) + '</td><td>' + procTag(g.processus) + '</td><td>' + esc(g.leader_regional || '—') + '</td>' +
+        '<td class="n">' + ((e.contributeur_local || {}).inscrits || 0) + '/20</td><td class="n">' + ((e.leader_communal || {}).inscrits || 0) + '/80</td><td class="n">' + loc + '/160</td>' +
+        '<td class="n">' + (g.cellules_completes || 0) + '/20</td><td class="n">' + (g.processus === 'direct' ? P(g.gap_taux) : '—') + '</td><td class="n">' + P(g.taux_recouvrement) + '</td><td class="n">' + F(g.arrieres_total) + '</td></tr>';
+    });
+    h += '</tbody></table><p class="k-sub" style="margin:10px 0 0">Cliquez sur une région pour voir le détail de sa cascade.</p>';
+    $('casc-regions').innerHTML = r.regions.length ? h : '<p class="empty">Aucune région dans votre périmètre.</p>';
+    $('casc-regions').querySelectorAll('tr[data-r]').forEach(function (tr) {
+      tr.addEventListener('click', function () { etat.region = tr.dataset.r; chargerCascade(etat.region); });
+    });
+    detailCascade(r);
+    presidentiel(r.presidentiel);
+  }
+
+  function detailCascade(r) {
+    var box = $('casc-detail'), d = r.detail;
+    if (!d) { box.classList.add('hidden'); box.innerHTML = r.detail_erreur ? '<p class="casc-msg">⚠ ' + esc(r.detail_erreur) + '</p>' : ''; if (r.detail_erreur) box.classList.remove('hidden'); return; }
+    box.classList.remove('hidden');
+    var g = d.region, direct = g.processus === 'direct', m = d.mensualite || {};
+    var h = '<div class="panel"><div class="casc-head"><div><h3>' + esc(g.nom) + '</h3><p class="k-sub">' + procTag(g.processus) + ' · Redevances ' + moisLong(g.debut_redevances) + ' → ' + moisLong(g.fin_redevances) +
+      ' · ' + (m.phase === 'avant' ? 'avant la 1re mensualité' : m.phase === 'apres' ? 'calendrier achevé' : 'mensualité ' + m.index + ' / 25') + '</p></div>' +
+      '<div class="k-sub">Leader Préfinançant : <b style="color:var(--text)">' + esc((d.leader_regional || {}).nom || 'non encore inscrit') + '</b></div></div>';
+    h += '<div class="casc-kpis">';
+    if (direct) {
+      var gp = d.gap || {}, rl = d.remontee_leader || {}, ci = d.collecte_interne || {};
+      h += tuileBarre('GAP versé', FC(gp.verse), 'sur 49 125 000 F', gp.taux, 'hero');
+      h += tuileBarre('Remontée au Leader', FC(rl.percu), 'dû à date ' + FC(rl.du_a_date), rl.taux_recouvrement == null ? null : rl.taux_recouvrement);
+      h += tuileBarre('Remboursement du GAP', P(rl.progression_gap), 'reste ' + FC(rl.reste_a_rembourser), rl.progression_gap);
+      h += tuileBarre('Collecte interne', FC(ci.percu), 'Communaux et Locaux · dû ' + FC(ci.du_a_date), ci.taux_recouvrement == null ? null : ci.taux_recouvrement);
+    } else {
+      var tk = d.tickets_coalition || {};
+      h += tuileBarre('Tickets versés', FC(tk.percu), 'à la Coalition 509 · dû ' + FC(tk.du_a_date), tk.taux_recouvrement == null ? null : tk.taux_recouvrement, 'hero');
+      Object.keys(d.remboursements_descendants || {}).forEach(function (k) {
+        var x = d.remboursements_descendants[k];
+        h += tuileBarre('Remboursements · ' + (NIV[k] || k), FC(x.verse), 'dû à date ' + FC(x.du_a_date), pct(x.verse, x.du_a_date));
+      });
+    }
+    h += tuileBarre('Cellules complètes', d.cellules_completes + ' / 20', '', pct(d.cellules_completes, 20));
+    h += tuileBarre('Arriérés', F(d.arrieres_total), d.nb_retards + ' souscripteur(s) en retard', null);
+    h += '</div>';
+    if (direct && d.gap) {
+      h += '<div class="tr3" style="margin-bottom:12px">' + d.gap.tranches.map(function (t) {
+        return '<div class="card"><p class="k-label">Tranche ' + t.n + ' · ' + moisLong(t.mois) + '</p><p class="k-value">' + F(t.montant) + '</p><div class="pbar' + (t.statut === 'versee' ? ' ok' : '') + '"><div style="width:' + pct(t.verse, t.montant) + '%"></div></div><p class="k-sub">' +
+          (t.statut === 'versee' ? '✓ versée' : t.statut === 'echue_partielle' ? '⚠ échue — versé ' + F(t.verse) : 'à venir') + '</p></div>';
+      }).join('') + '</div>';
+    }
+    h += '<div class="two"><div class="card"><p class="k-label">25 mensualités — cumul attendu et perçu</p>' + courbeCascade(d) +
+      '<div class="legend"><span><i class="sw" style="background:var(--text-muted)"></i>Cible Convention</span><span><i class="sw" style="background:var(--orange)"></i>Attendu (effectifs)</span><span><i class="sw" style="background:var(--green)"></i>Perçu</span></div></div>';
+    h += '<div class="card"><p class="k-label">Effectifs et quotas</p><div class="eff">' + ['leader_regional', 'contributeur_local', 'leader_communal', 'artisan_ngd', 'animateur_ngd'].map(function (k) {
+      var x = (d.effectifs || {})[k] || { inscrits: 0, quota: 0 };
+      var rt = (d.retards_par_niveau || {})[k];
+      return '<span>' + esc(NIV[k]) + (rt ? ' <span style="color:var(--alert)">· ' + rt.nb + ' en retard</span>' : '') + '</span><span class="mono">' + x.inscrits + ' / ' + x.quota + '</span><div class="pbar' + (x.inscrits >= x.quota ? ' ok' : '') + '"><div style="width:' + pct(x.inscrits, x.quota) + '%"></div></div>';
+    }).join('') + '</div>';
+    var fc = d.fonctions_contributeurs || {};
+    h += '<p class="k-sub">Contributeurs : ' + Object.keys(fc).map(function (k) { return esc(fc[k].libelle) + ' ' + fc[k].inscrits + '/' + fc[k].quota; }).join(' · ') + '</p></div></div>';
+    if (d.retards && d.retards.length) {
+      h += '<div class="card" style="margin-top:12px"><p class="k-label">Retards (administrateurs seulement)</p><table><thead><tr><th>Nom</th><th>Niveau</th><th class="n">Échéances impayées</th><th class="n">Arriérés</th></tr></thead><tbody>' +
+        d.retards.slice(0, 10).map(function (x) { return '<tr><td>' + esc(x.nom) + '</td><td>' + esc(NIV[x.niveau] || x.niveau) + '</td><td class="n">' + N(x.mensualites_impayees) + '</td><td class="n">' + F(x.arrieres) + '</td></tr>'; }).join('') + '</tbody></table>' +
+        (d.nb_retards > 10 ? '<p class="k-sub">… et ' + (d.nb_retards - 10) + ' autre(s) : liste complète sur la page Cascade de l\'API (Direction d\'Exploitation).</p>' : '') + '</div>';
+    }
+    h += '</div>';
+    box.innerHTML = h;
+  }
+
+  function courbeCascade(d) {
+    var c = d.courbe || []; if (!c.length) return '<p class="empty">Pas de calendrier.</p>';
+    var W = 560, H = 210, pl = 50, pr = 8, pt = 10, pb = 24;
+    var cibleTot = c.reduce(function (a, x) { return a + x.cible_convention; }, 0);
+    var max = Math.max(cibleTot, c[c.length - 1].cumul_attendu, Math.max.apply(null, c.map(function (x) { return x.cumul_percu || 0; })), 1);
+    var X = function (i) { return pl + (W - pl - pr) * (i - 1) / 24; }, Y = function (v) { return pt + (H - pt - pb) * (1 - v / max); };
+    var cum = 0, ptsC = c.map(function (x) { cum += x.cible_convention; return X(x.n).toFixed(1) + ',' + Y(cum).toFixed(1); }).join(' ');
+    var ptsA = c.map(function (x) { return X(x.n).toFixed(1) + ',' + Y(x.cumul_attendu).toFixed(1); }).join(' ');
+    var ptsP = c.filter(function (x) { return x.cumul_percu != null; }).map(function (x) { return X(x.n).toFixed(1) + ',' + Y(x.cumul_percu).toFixed(1); }).join(' ');
+    var s = '<div class="chart-box"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cumul attendu et perçu sur 25 mensualités">';
+    [0, 0.5, 1].forEach(function (f) { s += '<line class="' + (f ? 'grid-line' : 'base-line') + '" x1="' + pl + '" x2="' + (W - pr) + '" y1="' + Y(max * f) + '" y2="' + Y(max * f) + '"/><text class="axis-text" x="' + (pl - 6) + '" y="' + (Y(max * f) + 3.5) + '" text-anchor="end">' + (f ? nfc.format(max * f) : '0') + '</text>'; });
+    c.filter(function (x) { return x.n === 1 || x.n === 13 || x.n === 25; }).forEach(function (x) { s += '<text class="axis-text" x="' + X(x.n) + '" y="' + (H - 6) + '" text-anchor="middle">' + (x.n === 25 ? 'M25' : moisLong(x.mois)) + '</text>'; });
+    s += '<polyline points="' + ptsC + '" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="4 4"/>';
+    s += '<polyline points="' + ptsA + '" fill="none" stroke="var(--orange)" stroke-width="2.5"/>';
+    if (ptsP) s += '<polyline points="' + ptsP + '" fill="none" stroke="var(--green)" stroke-width="2.5"/>';
+    return s + '</svg></div>';
+  }
+
+  function presidentiel(p) {
+    var box = $('casc-pres');
+    if (!p) { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    box.innerHTML = '<div class="panel"><div class="casc-head"><div><h3>④ Convention Leader Présidentielle</h3><p class="k-sub">GAP national 687 750 000 F (14 × 49 125 000 F), remboursé à la Coalition 509 en 3 tranches</p></div>' +
+      '<div><p class="k-value" style="color:var(--orange)">' + P(p.taux) + '</p><p class="k-sub">' + esc(p.candidat || 'Candidat Allié non encore enregistré') + ' · ' + F(p.verse) + ' versés</p></div></div>' +
+      '<div class="tr3">' + (p.tranches || []).map(function (t) {
+        return '<div class="card"><p class="k-label">Tranche ' + t.n + ' — ' + t.pct + ' %</p><p class="k-value">' + F(t.montant) + '</p><p class="k-sub">' + esc(t.evenement) + '</p><div class="pbar' + (t.statut === 'versee' ? ' ok' : '') + '"><div style="width:' + pct(t.verse, t.montant) + '%"></div></div><p class="k-sub">' + (t.statut === 'versee' ? '✓ versée' : t.statut === 'partielle' ? 'partielle : ' + F(t.verse) : 'à venir') + '</p></div>';
+      }).join('') + '</div></div>';
+  }
+
   /* ---------- Export CSV ---------- */
   function exporterCSV() {
     var d = etat.data; if (!d) return;
@@ -758,6 +932,15 @@
     d.jours.forEach(function (j) {
       L.push([j.date].concat(bots.map(function (b) { return (j.par_bot[b.id] || {}).brut || 0; }), bots.map(function (b) { return (j.par_bot[b.id] || {}).net || 0; })).map(q).join(sep));
     });
+    if (etat.cascade && etat.cascade.regions) {
+      L.push('');
+      L.push(['Cascade — Région', 'Processus', 'Contributeurs', 'Communaux', 'Locaux', 'Cellules complètes', 'GAP versé', 'Perçu', 'Dû à date', 'Arriérés'].map(q).join(sep));
+      etat.cascade.regions.forEach(function (g) {
+        var e = g.effectifs || {};
+        L.push([g.nom, g.processus, (e.contributeur_local || {}).inscrits, (e.leader_communal || {}).inscrits,
+          ((e.artisan_ngd || {}).inscrits || 0) + ((e.animateur_ngd || {}).inscrits || 0), g.cellules_completes, g.gap_verse || 0, g.percu, g.du_a_date, g.arrieres_total].map(q).join(sep));
+      });
+    }
     var blob = new Blob(['﻿' + L.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -768,6 +951,7 @@
 
   /* ---------- Mode démonstration (?demo=1) : données FICTIVES ---------- */
   function demo(req) {
+    if (req.action === 'cascade') return demoCascade(req.region);
     if (req.action === 'connexion') return { ok: true, jeton: 'demo', partenaire: { nom: 'Partenaire de démonstration', organisation: 'Aperçu', bots: '*', regions: '*', admin: false } };
     var du = req.du, au = req.au, jours = [], nbJ = 0;
     var alea = function (seed) { var x = Math.sin(seed) * 10000; return x - Math.floor(x); };
@@ -819,8 +1003,56 @@
       abonnements: { mois: au.slice(0, 7), mrr: 450000, churn_pct: 3.2, cac: null, ltv: null,
         suivi_acces: { a_jour: 128, non_a_jour: 9, retires_du_groupe: 4, reintegres_ce_mois: 6 },
         historique: [{ date: '2026-09-29', action: 'Réactivation', nom_complet: 'Abonné démo A', nom_groupe: 'Coalition 509 — Bélier' },
-                     { date: '2026-09-28', action: 'Suspension', nom_complet: 'Abonné démo B', nom_groupe: 'Coalition 509 — Mé' }] }
+                     { date: '2026-09-28', action: 'Suspension', nom_complet: 'Abonné démo B', nom_groupe: 'Coalition 509 — Mé' }] },
+      cascade_disponible: true
     };
+  }
+
+  /* Cascade FICTIVE pour l'aperçu (?demo=1) — montants conformes au barème des Conventions */
+  function demoCascade(region) {
+    var noms = [['belier', 'Bélier'], ['me', 'La Mé'], ['grands_ponts', 'Grands-Ponts'], ['agneby_tiassa', 'Agnéby-Tiassa'], ['sud_comoe', 'Sud-Comoé'],
+      ['abidjan', "District Autonome d'Abidjan"], ['yamoussoukro', 'District Autonome de Yamoussoukro'], ['gbeke', 'Gbêkê'], ['loh_djiboua', 'Lôh-Djiboua'],
+      ['goh', 'Gôh'], ['nzi', "N'Zi"], ['iffou', 'Iffou'], ['moronou', 'Moronou'], ['indenie_djuablin', 'Indénié-Djuablin']];
+    var profils = { agneby_tiassa: [1, 20, 64, 120, 13, 49125000], belier: [1, 14, 40, 70, 8, 32750000], abidjan: [0, 6, 12, 18, 2, 0] };
+    var regions = noms.map(function (x) {
+      var p = profils[x[0]] || [0, 0, 0, 0, 0, 0];
+      return { id: x[0], nom: x[1], type: noms.indexOf(x) < 7 ? 'pilote' : 'expansion', processus: x[0] === 'abidjan' ? 'inverse' : 'direct',
+        debut_redevances: x[0] === 'abidjan' ? '2026-10' : '2027-04', fin_redevances: x[0] === 'abidjan' ? '2028-10' : '2029-04',
+        effectifs: { leader_regional: { inscrits: p[0], quota: 1 }, contributeur_local: { inscrits: p[1], quota: 20 }, leader_communal: { inscrits: p[2], quota: 80 },
+                     artisan_ngd: { inscrits: Math.ceil(p[3] / 2), quota: 80 }, animateur_ngd: { inscrits: Math.floor(p[3] / 2), quota: 80 } },
+        cellules_completes: p[4], leader_regional: p[0] ? 'Leader démo ' + x[1] : null, gap_verse: x[0] === 'abidjan' ? null : p[5],
+        gap_taux: x[0] === 'abidjan' ? null : Math.round(p[5] / 49125000 * 1000) / 10, percu: x[0] === 'abidjan' ? 610000 : 0, du_a_date: x[0] === 'abidjan' ? 690000 : 0,
+        taux_recouvrement: x[0] === 'abidjan' ? 88.4 : null, arrieres_total: x[0] === 'abidjan' ? 80000 : 0, nb_retards: x[0] === 'abidjan' ? 4 : 0 };
+    });
+    var t = { leaders: 2, contributeurs: 40, communaux: 116, locaux: 208, cellules_completes: 23, gap_verse: 81875000, percu: 610000, du_a_date: 690000,
+              arrieres: 80000, regions_direct: 13, regions_gap_complet: 1, nb_regions: 14, acteurs: 364, acteurs_cible: 3640, taux_recouvrement: 88.4 };
+    var rep = { ok: true, visible: true, statut: 'ok', au: aujourdhui().slice(0, 7), portee: 'nationale', regions: regions, totaux: t,
+      presidentiel: { candidat: null, montant: 687750000, verse: 0, taux: 0, tranches: [
+        { n: 1, pct: 25, montant: 171937500, evenement: "1 mois avant l'Annonce Officielle Conjointe", verse: 0, statut: 'a_venir' },
+        { n: 2, pct: 25, montant: 171937500, evenement: 'Ouverture de la pré-campagne présidentielle', verse: 0, statut: 'a_venir' },
+        { n: 3, pct: 50, montant: 343875000, evenement: 'Ouverture officielle de la campagne', verse: 0, statut: 'a_venir' }] } };
+    var g = regions.filter(function (x) { return x.id === region; })[0];
+    if (g) {
+      var courbe = [], ca = 0, cp = 0, eff = g.effectifs.contributeur_local.inscrits;
+      for (var i = 1; i <= 25; i++) {
+        var m = (function (deb, k) { var y = +deb.slice(0, 4), mo = +deb.slice(5, 7) - 1 + k; return (y + Math.floor(mo / 12)) + '-' + ('0' + (mo % 12 + 1)).slice(-2); })(g.debut_redevances, i - 1);
+        var att = (i <= 24 ? 100300 : 49050) * eff; ca += att;
+        courbe.push({ n: i, mois: m, cible_convention: i <= 24 ? 2006000 : 981000, attendu: att, cumul_attendu: ca, cumul_percu: null });
+      }
+      rep.detail = { region: { id: g.id, nom: g.nom, processus: g.processus, debut_redevances: g.debut_redevances, fin_redevances: g.fin_redevances },
+        au: rep.au, mensualite: { index: null, phase: 'avant' }, effectifs: g.effectifs,
+        fonctions_contributeurs: { vp_region: { libelle: 'Vice-Président(e) de Région', inscrits: Math.min(2, eff), quota: 2 }, maire: { libelle: 'Maire (tête de liste)', inscrits: Math.min(6, Math.max(0, eff - 2)), quota: 6 }, adjoint_maire: { libelle: 'Adjoint(e) au Maire', inscrits: Math.max(0, eff - 8), quota: 12 } },
+        cellules_completes: g.cellules_completes, leader_regional: g.leader_regional ? { nom: g.leader_regional } : null, courbe: courbe,
+        gap: g.processus === 'direct' ? { montant: 49125000, verse: g.gap_verse, taux: g.gap_taux, tranches: [1, 2, 3].map(function (k) {
+          var v = Math.max(0, Math.min(16375000, g.gap_verse - (k - 1) * 16375000));
+          return { n: k, mois: ['2026-11', '2026-12', '2027-01'][k - 1], montant: 16375000, verse: v, statut: v >= 16375000 ? 'versee' : 'a_venir' }; }) } : null,
+        remontee_leader: g.processus === 'direct' ? { percu: 0, du_a_date: 0, taux_recouvrement: null, progression_gap: 0, reste_a_rembourser: 49125000 } : null,
+        collecte_interne: g.processus === 'direct' ? { percu: 0, du_a_date: 0, taux_recouvrement: null } : null,
+        tickets_coalition: g.processus === 'inverse' ? { percu: 610000, du_a_date: 690000, taux_recouvrement: 88.4 } : null,
+        remboursements_descendants: g.processus === 'inverse' ? { leader_communal: { verse: 60000, du_a_date: 90000 } } : null,
+        arrieres_total: g.arrieres_total, nb_retards: g.nb_retards, retards_par_niveau: g.nb_retards ? { artisan_ngd: { nb: 3, arrieres: 45000 }, animateur_ngd: { nb: 1, arrieres: 35000 } } : {}, retards: [] };
+    }
+    return rep;
   }
 
   /* ---------- Démarrage ---------- */
