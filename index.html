@@ -10,6 +10,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <!--
   TABLEAU DE BORD PARTENAIRES — Écosystème VoteConnect · NGD
+  v3.2.0 (09/10/2026) — Édition « L'Appel de Tiassalé » (Hub Partenaires v1.7.0)
+  v3.2.0 : carte Challenger alignée sur l'Écosystème (TCL 509, Covoiturage 509,
+  Académie 509 — commission 20 %, Coaching Live, Mi Sikah) ; bouton « Prendre
+  rendez-vous » (Calendly pré-rempli au nom du partenaire) et lien « Pas encore
+  partenaire ? » sur l'écran de connexion (action publique « rdv » du Hub).
   v3.1.0 (05/10/2026) — Partenaires Financiers & Politiques
   v3.1.0 : section « Souscriptions en Cascade » (4 Conventions), lue par le
   Hub v1.5.0 dans l'API Centrale NGD v2.0.1 — agrégats uniquement.
@@ -159,6 +164,9 @@
   .tip .row span:last-child { font-family: var(--mono); color: var(--text); }
   .tip .tot { border-top: 1px solid var(--line-strong); margin-top: 4px; padding-top: 4px; }
   .empty { color: var(--text-muted); font-style: italic; font-size: 13px; padding: 24px 0; text-align: center; }
+  a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+  .bot-desc { font-size: 12px; color: var(--text-muted); margin: 6px 0 2px; line-height: 1.45; }
+  .rdv-lien { display: block; margin-top: 14px; text-align: center; font-size: 13px; color: var(--orange); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: 0; width: 100%; font-family: inherit; }
   .linkbtn { background: none; border: 0; color: var(--orange); font-family: var(--mono); font-size: 11.5px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
 
   /* ---------- Bots ---------- */
@@ -241,7 +249,7 @@
   <form class="login-card" id="form-connexion" autocomplete="off">
     <p class="eyebrow">Écosystème VoteConnect · NGD</p>
     <h1>Espace Partenaires</h1>
-    <p class="lead">Suivi en temps réel de l'activité et de la rentabilité journalière des 5 Bots Métiers.</p>
+    <p class="lead">Suivi en temps réel de l'activité et de la rentabilité journalière des 5 Bots Métiers — <b>L'Appel de Tiassalé</b>, cap sur 2028.</p>
     <div class="field">
       <label for="code">Code d'accès partenaire</label>
       <input id="code" type="password" inputmode="text" placeholder="VC-XXXX-XXXX-XXXX" autocomplete="one-time-code" spellcheck="false" required>
@@ -250,6 +258,7 @@
     <label class="check" style="margin-top:-8px"><input type="checkbox" id="se-souvenir"> Rester connecté sur cet appareil</label>
     <button class="btn block" id="btn-connexion" type="submit">Accéder au tableau de bord</button>
     <p class="msg-err" id="err-connexion" role="alert"></p>
+    <button class="rdv-lien" id="btn-rdv-public" type="button">Pas encore partenaire ? 📅 Prendre rendez-vous avec VoteConnect</button>
     <p class="login-foot">Accès strictement réservé aux Partenaires Financiers &amp; Politiques de l'Écosystème.
       Votre code est personnel : ne le partagez pas. Pour obtenir ou renouveler un code, contactez VoteConnect SARL.</p>
   </form>
@@ -268,6 +277,7 @@
     </div>
     <div class="actions">
       <button class="btn" id="btn-actualiser" type="button">Actualiser</button>
+      <a class="btn ghost hidden" id="btn-rdv" href="#" target="_blank" rel="noopener">📅 Prendre rendez-vous</a>
       <button class="btn ghost" id="btn-csv" type="button">Exporter CSV</button>
       <button class="btn ghost" id="btn-imprimer" type="button">Imprimer / PDF</button>
       <button class="btn ghost" id="btn-deconnexion" type="button">Déconnexion</button>
@@ -341,11 +351,12 @@
     <b>Volume d'affaires brut</b> : totalité des montants payés par les usagers via l'Écosystème (courses, missions, ventes TCL, frais de dossier, forfaits…).
     <b>Revenu net VoteConnect</b> : part qui revient réellement à VoteConnect SARL (commissions, 2 % du CashBack TCL, frais de dossier et de connexion, forfaits).
     <b>Résultat</b> : revenu net diminué des charges d'exploitation de la période (hébergement, bases de données, maintenance…).
-    Les <b>flux</b> (ex. dépôts Mi Sikah) et les <b>activités</b> (inscriptions, candidatures) sont suivis à part : ils ne sont pas du chiffre d'affaires.
+    Les <b>flux</b> (ex. dépôts Mi Sikah, courses du Covoiturage 509 payées aux transporteurs) et les <b>activités</b> (inscriptions, Experts, sessions de l'Académie 509, abonnés au Coaching Live) sont suivis à part : ils ne sont pas du chiffre d'affaires.
+    <b>Académie 509</b> : sur chaque billet de Masterclass, Conférence ou Brainstorming et chaque produit de la Boutique des Savoirs, 20 % reviennent à VoteConnect et 80 % à l'Expert.
     <b>Souscriptions en Cascade</b> : redevances des 4 Conventions (Leader Préfinançant 49 125 000 F par région ; Contributeur Local 100 300 F ; Leader Communal 17 500 F ; Artisan 5 000 F ; Animateur 2 500 F par mois). Elles financent la mobilisation et le remboursement du GAP : elles ne sont pas du chiffre d'affaires de VoteConnect et n'entrent pas dans les totaux ci-dessus.
     Chiffres actualisés toutes les 5 minutes au maximum ; fuseau horaire : Abidjan (GMT).
   </p>
-  <div class="foot"><span id="foot-gen"></span><span>VoteConnect SARL · Tableau de bord Partenaires v3.1.0</span></div>
+  <div class="foot"><span id="foot-gen"></span><span>VoteConnect SARL · Tableau de bord Partenaires v3.2.0</span></div>
 </main>
 
 <div class="tip hidden" id="tip" role="tooltip"></div>
@@ -360,7 +371,15 @@
      ============================================================ */
   var HUB_URL = 'https://script.google.com/macros/s/AKfycbzmGNSvmS5GFoe6dSrBilGS1AUjpigmeR-iXIX6zdZCRMOs3r6rRgtBYxapl2GjJZt3AQ/exec';
 
-  var VERSION = '3.1.0';
+  var VERSION = '3.2.0';
+  // v3.2.0 : ce que couvre chaque bot (ligne éditoriale « L'Appel de Tiassalé »)
+  var BOT_DESC = {
+    CHALLENGER: 'TCL 509 · Covoiturage 509 · Check-Points · Académie 509 · Mi Sikah · Coaching Live',
+    BIBA: 'Biennale Internationale des Beaux-Arts · Galerie en ligne',
+    BOT509: 'BTP · Immobilier & Hôtels · Place de marché Coalition 509',
+    TAXI509: 'Taxis urbains de Tiassalé',
+    EXPERT509: 'Enseignants · Agents de santé · Coursiers-livreurs'
+  };
   var BOTS = [
     { id: 'CHALLENGER', nom: 'Challenger',   pile: 'HISTORIQUE', c: 'var(--bot-challenger)' },
     { id: 'BIBA',       nom: 'BIBA',         pile: 'HISTORIQUE', c: 'var(--bot-biba)' },
@@ -462,6 +481,15 @@
     $('code').focus();
   }
   $('btn-deconnexion').addEventListener('click', function () { deconnexion(''); });
+  $('btn-rdv-public').addEventListener('click', function () {
+    var b = this, fen = window.open('', '_blank');          // ouverte tout de suite (sinon bloquée par le navigateur)
+    b.disabled = true; $('err-connexion').textContent = '';
+    (DEMO || hubConfigure() ? appelHub({ action: 'rdv' }) : Promise.resolve({ ok: false })).then(function (r) {
+      if (r && r.ok && /^https:\/\//.test(r.lien)) { if (fen) fen.location.href = r.lien; else window.location.href = r.lien; }
+      else { if (fen) fen.close(); $('err-connexion').textContent = 'La prise de rendez-vous en ligne ouvre très bientôt : contactez VoteConnect SARL.'; }
+    }).catch(function () { if (fen) fen.close(); $('err-connexion').textContent = 'Service momentanément indisponible. Réessayez dans un instant.'; })
+      .then(function () { b.disabled = false; });
+  });
 
   function ouvrir(jeton, p) {
     etat.jeton = jeton; etat.partenaire = p;
@@ -541,6 +569,8 @@
     blocCharges(d);
     blocAbonnements(d);
     $('bots-periode').textContent = d.periode.nb_jours === 1 ? dateLongue(d.periode.du) : d.periode.nb_jours + ' jours';
+    var rdv = $('btn-rdv');
+    if (d.rendez_vous && /^https:\/\//.test(d.rendez_vous)) { rdv.href = d.rendez_vous; rdv.classList.remove('hidden'); } else rdv.classList.add('hidden');
     $('foot-gen').textContent = 'Hub v' + d.version + ' · généré le ' + d.genere_le.slice(0, 10).split('-').reverse().join('/') + ' à ' + d.genere_le.slice(11, 16);
   }
 
@@ -703,6 +733,7 @@
       if (b.flux) extra.push(['Flux hors CA', F(b.flux)]);
       return '<article class="card bot" style="--c:' + meta.c + '">' +
         '<h3 class="bot-name"><i class="sw" style="background:' + meta.c + '"></i>' + esc(meta.nom) + '</h3>' +
+        (BOT_DESC[b.id] ? '<p class="bot-desc">' + esc(BOT_DESC[b.id]) + '</p>' : '') +
         '<div class="bot-head"><span class="chip"><i style="background:' + st.c + '"></i>' + (b.statut === 'ok' ? '✓ ' : b.statut === 'erreur' ? '⚠ ' : b.statut === 'partiel' ? '◐ ' : '… ') + esc(st.l) + '</span>' +
         '<span class="pile ' + (b.pile === 'SAAS' ? 'saas' : 'hist') + '">PILE ' + (b.pile === 'SAAS' ? 'SAAS' : 'HISTORIQUE') + '</span></div>' +
         '<div class="bot-figs">' +
@@ -952,6 +983,7 @@
   /* ---------- Mode démonstration (?demo=1) : données FICTIVES ---------- */
   function demo(req) {
     if (req.action === 'cascade') return demoCascade(req.region);
+    if (req.action === 'rdv') return { ok: true, lien: 'https://calendly.com/' };
     if (req.action === 'connexion') return { ok: true, jeton: 'demo', partenaire: { nom: 'Partenaire de démonstration', organisation: 'Aperçu', bots: '*', regions: '*', admin: false } };
     var du = req.du, au = req.au, jours = [], nbJ = 0;
     var alea = function (seed) { var x = Math.sin(seed) * 10000; return x - Math.floor(x); };
@@ -976,7 +1008,7 @@
     var charges = Math.round(nbJ * 1450);
     var pr = function (v) { return Math.round(v * 0.91); };
     return {
-      ok: true, version: 'démo', genere_le: new Date().toISOString().slice(0, 19).replace('T', ' '), depuis_cache: false,
+      ok: true, version: 'démo', rendez_vous: 'https://calendly.com/', genere_le: new Date().toISOString().slice(0, 19).replace('T', ' '), depuis_cache: false,
       partenaire: { nom: 'Partenaire de démonstration', bots: '*', regions: '*' },
       periode: { du: du, au: au, nb_jours: nbJ },
       totaux: { brut: tot.brut, net: tot.net, nb: tot.nb, flux: 320000 * nbJ / 7, activite: 12 * nbJ, taux_net: Math.round(tot.net / tot.brut * 1000) / 10,
@@ -988,7 +1020,7 @@
         var x = parBot[b.id] || { brut: 0, net: 0, nb: 0 };
         return { id: b.id, nom: b.nom, pile: b.pile, statut: b.id === 'BIBA' ? 'en_attente' : 'ok', message: b.id === 'BIBA' ? 'Intégration en cours' : 'Données à jour',
           brut: x.brut, net: x.net, nb: x.nb, flux: b.id === 'CHALLENGER' ? Math.round(320000 * nbJ / 7) : 0,
-          activite: b.id === 'BIBA' ? { 'Candidatures': 7 * nbJ, 'Mécènes': Math.ceil(nbJ / 3) } : (b.id === 'CHALLENGER' ? { 'Inscriptions NGD': 5 * nbJ } : {}),
+          activite: b.id === 'BIBA' ? { 'Candidatures': 7 * nbJ, 'Mécènes': Math.ceil(nbJ / 3) } : (b.id === 'CHALLENGER' ? { 'Inscriptions NGD': 5 * nbJ, 'Experts Académie 509': 7, 'Sessions Académie 509': Math.ceil(nbJ / 2), 'Abonnés Coaching Live': 57, 'Check-Points 509': 4, 'Prestataires Covoiturage 509': 6 } : {}),
           indicateurs: b.id === 'TAXI509' ? { 'Chauffeurs actifs': 42 } : (b.id === 'EXPERT509' ? { 'Prestataires actifs': 67, 'Abonnements en cours': 23 } : {}) };
       }),
       jours: jours,
@@ -997,7 +1029,9 @@
         { bot: 'CHALLENGER', flux: 'Ventes TCL', type: 'REVENU', brut: (parBot.CHALLENGER || {}).brut || 0, net: (parBot.CHALLENGER || {}).net || 0, nb: (parBot.CHALLENGER || {}).nb || 0 },
         { bot: 'EXPERT509', flux: 'Missions & abonnements', type: 'REVENU', brut: (parBot.EXPERT509 || {}).brut || 0, net: (parBot.EXPERT509 || {}).net || 0, nb: (parBot.EXPERT509 || {}).nb || 0 },
         { bot: 'BOT509', flux: 'Frais de dossier & connexion Hôtel', type: 'REVENU', brut: (parBot.BOT509 || {}).brut || 0, net: (parBot.BOT509 || {}).net || 0, nb: (parBot.BOT509 || {}).nb || 0 },
+        { bot: 'CHALLENGER', flux: 'Académie 509 (billets + Boutique des Savoirs)', type: 'REVENU', brut: 25000 * nbJ, net: 5000 * nbJ, nb: 5 * nbJ },
         { bot: 'CHALLENGER', flux: 'Dépôts Mi Sikah', type: 'FLUX', brut: Math.round(320000 * nbJ / 7), net: 0, nb: 3 * nbJ },
+        { bot: 'CHALLENGER', flux: 'Covoiturage 509 (courses terminées)', type: 'FLUX', brut: 36000 * nbJ, net: 0, nb: 3 * nbJ },
         { bot: 'BIBA', flux: 'Candidatures', type: 'ACTIVITE', brut: 0, net: 0, nb: 7 * nbJ }
       ],
       abonnements: { mois: au.slice(0, 7), mrr: 450000, churn_pct: 3.2, cac: null, ltv: null,
